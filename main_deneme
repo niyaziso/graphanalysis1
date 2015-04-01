@@ -1,0 +1,146 @@
+import numpy as np
+import funs as fs
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.algorithms import components
+from collections import defaultdict
+from operator import itemgetter
+'from numpy import matrix'
+'from exist_search import exist_search'
+data = np.genfromtxt("EXTENDED_CARE.matrix", delimiter = ',')
+m_subgraph = len(data[:,1]); n_subgraph = len(data[1,:]); 
+perc_rate= 0.20; 
+attempt_limit = 10; 
+step_limit = 4;
+th_graph_nodes = 4; 
+new_data = data+1
+subgraph_anomaly_list = np.genfromtxt("extendedcare_anomaly_list.txt"); 
+subgraph_anomaly_list_len = int(len(subgraph_anomaly_list));
+umatrix3 = np.unique(new_data); 
+umatrix311 = np.matrix(new_data);
+umatrix3_len = (len(umatrix3)); 
+portion20 = int(round(umatrix3_len*0.2)); 
+listofindx = (np.random.uniform(0,umatrix3_len,[portion20]));
+train_sample_index = [];indmatrix = []; temp = 0; 
+train_sample = [];
+nonsample_set = []; 
+G = nx.Graph(); 
+count = defaultdict(int)
+G.add_nodes_from(umatrix3);
+for i in range(0,len(new_data)):
+    edge_list = [(new_data[i,0], new_data[i,1])]
+    G.add_edges_from(edge_list);
+    count['components']+=1
+    components = nx.connected_components(G)
+node_and_degree=G.degree()
+(largest_hub,degree)=sorted(node_and_degree.items(),key=itemgetter(1))[-1]
+hub_ego=nx.ego_graph(G,largest_hub)
+pos=nx.spring_layout(hub_ego)
+#nx.draw(hub_ego,pos,node_color='b',node_size=50,with_labels=False)
+#nx.draw_networkx_nodes(hub_ego,pos,nodelist=[largest_hub],node_size=300,node_color='r')
+dictlist = []
+for key, value in node_and_degree.iteritems():
+    temp = [key,value]
+    dictlist.append(temp)
+dictlist1 = np.transpose(dictlist);
+dictlist2 = dictlist1[1]
+sortind = sorted(range(len(dictlist2)), key=lambda k: dictlist2[k],reverse=True)
+for sorted1 in range(0,len(sortind)):
+    if sortind[sorted1] < th_graph_nodes:
+        thlimit = sorted1;
+worth_nodes = sortind[0:thlimit];
+dictlist0 = dictlist1[0] ;newdictlist=[]
+for index in worth_nodes:#, value in node_and_degree.iteritems():
+    temp = [dictlist0[index]]
+    newdictlist.append(temp)
+    
+Gnew = nx.path_graph(degree); newdictlist1=np.array([])
+for i in range(0,len(newdictlist)):
+    newdictlist1=np.insert(newdictlist1, 0, newdictlist[i])
+count1 = defaultdict(int)
+Gnew.add_nodes_from(newdictlist1);Gnewlist = []; 
+for i1 in range(0,len(new_data)):
+    edge_list = [new_data[i1,0], new_data[i1,1]]
+    if ((edge_list[0] in newdictlist1) or (edge_list[1] in newdictlist1)):
+        edge_list =[(new_data[i1,0], new_data[i1,1])]
+        Gnewlist = np.append(Gnewlist,edge_list)
+        Gnew.add_edges_from(edge_list);
+        count1['components']+=1
+components = nx.connected_components(Gnew)
+H=nx.connected_component_subgraphs(Gnew)[0]
+
+clean_amount = len(new_data)-len(Gnewlist)/2
+nx.number_connected_components_subgraphs(Gnew)
+
+
+    
+
+
+     
+        
+        
+        
+
+c1 = nx.connected_component_subgraphs(G)
+list(nx.weakly_connected_component_subgraphs(G))
+largest = max(nx.weakly_connected_component_subgraphs(G),key=len)
+largest.nodes()
+largest.edges()
+    
+nx.is_connected(G)
+print components, count['components']
+components = nx.connected_components(G)
+ 
+
+while temp<umatrix3_len:
+    temp = temp+1; 
+    indmatrix = np.append(indmatrix,temp);
+for i in range(0,len(listofindx)):
+    temp = int(round(listofindx[i])); 
+    train_sample_index =np.append(train_sample_index, temp);
+for i in range(0,umatrix3_len):
+    if (i in train_sample_index):
+        train_sample = np.append(train_sample, umatrix3[i]);
+    else: 
+        nonsample_set = np.append(nonsample_set, umatrix3[i]);      
+utrain_sample = np.unique(train_sample);
+train_sample_anomaly = np.array([]);j1 = []; 
+for k in range(0,len(utrain_sample)):
+    for j in range(0,len(subgraph_anomaly_list)):
+        if utrain_sample[k] == subgraph_anomaly_list[j]:
+            j1 = np.append(j1,j); 
+            train_sample_anomaly = np.append(train_sample_anomaly,utrain_sample[k]);
+            break
+nonsample_anomaly_index = np.setdiff1d(range(0,len(subgraph_anomaly_list)),j1);
+i1 = 0;nonsample_anomaly = [];  
+for i1 in range(0, len(nonsample_anomaly_index)):
+    temp1 = nonsample_anomaly_index[i1]; 
+    temp = subgraph_anomaly_list[temp1];
+    nonsample_anomaly = np.append(nonsample_anomaly,temp); 
+g1 = len(nonsample_anomaly); 
+g2 = len(train_sample_anomaly); 
+matrix_gen = np.zeros([umatrix3_len,3]);
+for i in range(0,umatrix3_len):# all training unique nodes which is 20 percent. 
+    att = 0 ;
+    if (np.remainder(i, 1000)==1):
+       print i
+    element = umatrix3[i]
+    while att < attempt_limit:
+        step_count = 0 
+        wh1 = np.where(new_data==element)
+        r1 = np.random.randint(len(wh1[0]-1))
+        active_node = umatrix3[i] # new_data[wh1[0][r1], wh1[1][r1]]
+        active_node_seq = np.array([active_node])
+        check_anomaly_class = nonsample_anomaly # select which anomaly class you choose for the estimation
+        matrix_gen[i,2] = fs.checkanomaly(check_anomaly_class,active_node) # anomaly original indicator last column
+        while len(active_node_seq)<step_limit:
+            active_node = fs.otherside(wh1, new_data, r1)
+            active_node_seq = np.append(active_node_seq, active_node)
+            anomaly_res = fs.checkanomaly(check_anomaly_class,active_node_seq[-1]) # anomaly original indicator last column
+            anomaly_res_indicator = fs.oneise(active_node,check_anomaly_class)
+            matrix_gen[i,1] = matrix_gen[i,1] + anomaly_res_indicator
+            matrix_gen[i,0] = matrix_gen[i,0] + 1
+            att = att+1; 
+            if anomaly_res_indicator == 1:
+                break 
+ 
