@@ -1,0 +1,123 @@
+import numpy as np
+import funs as fs
+import networkx as nx
+import scipy.io as sio
+import matplotlib.pyplot as plt
+from networkx.algorithms import components
+from collections import defaultdict
+from operator import itemgetter
+import time
+tic = time.clock()
+'from numpy import matrix'
+'from exist_search import exist_search'
+data = np.genfromtxt("EXTENDED_CARE.matrix", delimiter = ',')
+m_subgraph = len(data[:,1]); n_subgraph = len(data[1,:]); 
+perc_rate= 0.20; 
+attempt_limit = 10; 
+step_limit = 4;
+th_graph_nodes = 4; 
+new_data = data+1
+subgraph_anomaly_list = np.genfromtxt("extendedcare_anomaly_list.txt"); 
+subgraph_anomaly_list_len = int(len(subgraph_anomaly_list));
+umatrix3 = np.unique(new_data); 
+umatrix311 = np.matrix(new_data);
+umatrix3_len = (len(umatrix3)); 
+portion20 = int(round(umatrix3_len*0.2)); 
+listofindx = (np.random.uniform(0,umatrix3_len,[portion20]));
+train_sample_index = [];indmatrix = []; temp = 0; 
+train_sample = [];
+nonsample_set = []; 
+checkinglist=subgraph_anomaly_list;
+G = nx.Graph(); 
+count = defaultdict(int)
+G.add_nodes_from(umatrix3);
+for i in range(0,len(new_data)):
+    edge_list = [(new_data[i,0], new_data[i,1])]
+    G.add_edges_from(edge_list);
+    count['components']+=1
+    components = nx.connected_components(G)
+node_and_degree=G.degree()
+(largest_hub,degree)=sorted(node_and_degree.items(),key=itemgetter(1))[-1]
+hub_ego=nx.ego_graph(G,largest_hub)
+pos=nx.spring_layout(hub_ego)
+#nx.draw(hub_ego,pos,node_color='b',node_size=50,with_labels=False)
+#nx.draw_networkx_nodes(hub_ego,pos,nodelist=[largest_hub],node_size=300,node_color='r')
+dictlist = []
+for key, value in node_and_degree.iteritems():
+    temp = [key,value]
+    dictlist.append(temp)
+dictlist1 = np.transpose(dictlist);
+dictlist2 = dictlist1[1]
+sortind = sorted(range(len(dictlist2)), key=lambda k: dictlist2[k],reverse=True)
+for sorted1 in range(0,len(sortind)):
+    if sortind[sorted1] < th_graph_nodes:
+        thlimit = sorted1;
+worth_nodes = sortind[0:thlimit];
+dictlist0 = dictlist1[0] ;newdictlist=[]
+for index in worth_nodes:#, value in node_and_degree.iteritems():
+    temp = [dictlist0[index]]
+    newdictlist.append(temp)
+    
+Gnew = nx.Graph(); newdictlist1=np.array([])
+for i in range(0,len(newdictlist)):
+    newdictlist1=np.insert(newdictlist1, 0, newdictlist[i])
+count1 = defaultdict(int)
+Gnew.add_nodes_from(newdictlist1);Gnewlist = []; 
+for i1 in range(0,len(new_data)):
+    edge_list = [new_data[i1,0], new_data[i1,1]]
+    if ((edge_list[0] in newdictlist1) or (edge_list[1] in newdictlist1)):
+        edge_list =[(new_data[i1,0], new_data[i1,1])]
+        Gnewlist = np.append(Gnewlist,edge_list)
+        Gnew.add_edges_from(edge_list);
+        count1['components']+=1
+components = nx.connected_components(Gnew)
+H=nx.connected_component_subgraphs(Gnew)
+
+cleaned_amount = len(new_data)-len(Gnewlist)/2
+num_con_com_clean = nx.number_connected_components(Gnew)
+num_con_com_noisy = nx.number_connected_components(G)
+noise_reduction_components = num_con_com_noisy-num_con_com_clean;
+list_conc_nodes = nx.connected_components(Gnew)
+list_conc_subgraphs = nx.connected_component_subgraphs(Gnew)
+temp2 = nx.node_connected_component(Gnew, newdictlist1[0])
+temp2 = array(temp2[0])
+ind_listi3 = array([]);lenind = ind_listi3;
+for i3 in range(0,len(newdictlist1)):
+    list1 = nx.node_connected_component(Gnew, newdictlist1[i3]) 
+    list1 = sorted(list1)
+    temp01 = len (list1)
+    temp0 = list1[0]
+
+    if temp0 not in temp2:
+        temp2 = np.append(temp2,temp0) 
+        ind_listi3 = np.append(ind_listi3,i3)
+        lenind = np.append(lenind,(len(list1)))
+        
+max_subgroup_numofnodes = max(lenind);
+temp3 = np.zeros([num_con_com_clean,max_subgroup_numofnodes]);
+c1 = 0
+for i4 in ind_listi3:
+    list2 = nx.node_connected_component(Gnew, newdictlist1[i4]) 
+    temp3[c1,0:len(list2)] = list2
+    c1+=1;
+temp6 = np.zeros([num_con_com_clean,max_subgroup_numofnodes])
+
+
+toc = time.clock()  ; comp_time=toc - tic    ## evaluate the computation time
+temp9 = np.empty([num_con_com_clean,max_subgroup_numofnodes])
+for i5 in range(0,num_con_com_clean):
+    temp4 = temp3[i5]
+    temp7 = array([]);
+    temp10 =temp6[i5];
+    i6 = 0; count = 0  
+    while i6 < int(lenind[i5])-1:
+        i6 = i6 + 1
+        temp5 = temp4[0:int(lenind[i5])]  
+        temp7 = np.append(temp7, fs.checkanomaly(checkinglist,temp5[i6]))
+    temp10[0:int(lenind[i5])-1] = temp7;
+    temp9[i5] =  temp10
+    
+
+
+            
+        
