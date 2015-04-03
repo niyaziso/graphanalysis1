@@ -1,0 +1,226 @@
+import numpy as np
+import funs as fs
+import networkx as nx
+import scipy.io as sio
+import matplotlib.pyplot as plt
+from networkx.algorithms import components
+from collections import defaultdict
+from operator import itemgetter
+import time
+import collections
+tic = time.clock()
+'from numpy import matrix'
+'from exist_search import exist_search'
+data = np.genfromtxt("EXTENDED_CARE.matrix", delimiter = ',')
+m_subgraph = len(data[:,1]); n_subgraph = len(data[1,:]); 
+perc_rate= 0.20; 
+attempt_limit = 5; 
+step_limit = 5;
+th_graph_nodes = 3; 
+new_data = data+1
+subgraph_anomaly_list = np.genfromtxt("extendedcare_anomaly_list.txt"); 
+subgraph_anomaly_list_len = int(len(subgraph_anomaly_list));
+umatrix3 = np.unique(new_data); 
+umatrix311 = np.matrix(new_data);
+umatrix3_len = (len(umatrix3)); 
+#portion20 = int(round(umatrix3_len*0.2)); 
+#listofindx = (np.random.uniform(0,umatrix3_len,[portion20]));
+train_sample_index = [];indmatrix = []; temp = 0; 
+train_sample = [];
+nonsample_set = []; 
+#train_an=np.random.uniform(0,subgraph_anomaly_list_len,int(round(subgraph_anomaly_list_len*perc_rate)));
+checkinglist=subgraph_anomaly_list;
+G = nx.Graph(); 
+count = defaultdict(int)
+G.add_nodes_from(umatrix3);
+for i in range(0,len(new_data)):
+    edge_list = [(new_data[i,0], new_data[i,1])]
+    G.add_edges_from(edge_list);
+    count['components']+=1
+  #  components = nx.connected_components(G)
+node_and_degree=G.degree()
+
+keys1 = node_and_degree.keys()
+myList=node_and_degree.values()
+sorteddegrees = sorted(myList, reverse = True)
+index1 = [i[0] for i in sorted(enumerate(myList), key=lambda x:x[1], reverse = True)]
+for i in index1:
+    if myList[index1[i]]==th_graph_nodes:
+        index_limit = i
+        break
+print index_limit
+#(largest_hub,degree)=sorted(node_and_degree.items(),key=itemgetter(1))[-1]
+#hub_ego=nx.ego_graph(G,largest_hub)
+#pos=nx.spring_layout(hub_ego)
+#nx.draw(hub_ego,pos,node_color='b',node_size=50,with_labels=False)
+#nx.draw_networkx_nodes(hub_ego,pos,nodelist=[largest_hub],node_size=300,node_color='r')
+dictlist = [];
+for i in range(0,index_limit):
+    dictlist.append([keys1[index1[i]],myList[index1[i]]])
+dictlist1 = np.transpose(dictlist);
+dictlist2 = dictlist1[1]
+dictlist0 = dictlist1[0] 
+
+Gnew = nx.Graph(); 
+Gnew.add_nodes_from(dictlist0)
+count1 = 0 
+Gnewlist = []; 
+for i1 in range(0,len(new_data)):
+    edge_list = [new_data[i1,0], new_data[i1,1]]
+    if ((edge_list[0] in dictlist0) or (edge_list[1] in dictlist0)):
+        edge_list =[(new_data[i1,0], new_data[i1,1])]
+        Gnewlist=np.append(Gnewlist,edge_list)
+        Gnew.add_edges_from(edge_list);
+        count1 = count1+1
+        #count1['components']+=1
+components = nx.connected_components(Gnew)
+H=nx.connected_component_subgraphs(Gnew)
+
+cleaned_amount = len(new_data)-len(Gnewlist)/2
+num_con_com_clean = nx.number_connected_components(Gnew)
+num_con_com_noisy = nx.number_connected_components(G)
+noise_reduction_components = num_con_com_noisy-num_con_com_clean;
+list_conc_nodes = nx.connected_components(Gnew)
+list_conc_subgraphs = nx.connected_component_subgraphs(Gnew)
+temp2 = nx.node_connected_component(Gnew, dictlist0[0])
+temp2 = np.array(temp2[0])
+ind_listi3 = np.array([]);lenind = ind_listi3;
+for i3 in range(0,len(dictlist0)):
+    list1 = nx.node_connected_component(Gnew, dictlist0[i3]) 
+    list1 = sorted(list1)
+    temp01 = len (list1)
+    temp0 = list1[0]
+
+    if temp0 not in temp2:
+        temp2 = np.append(temp2,temp0) 
+        ind_listi3 = np.append(ind_listi3,i3)
+        lenind = np.append(lenind,(len(list1)))
+        
+max_subgroup_numofnodes = max(lenind);
+temp3 = np.zeros([num_con_com_clean,max_subgroup_numofnodes]);
+c1 = 0
+for i4 in ind_listi3:
+    list2 = nx.node_connected_component(Gnew, dictlist0[i4]) 
+    temp3[c1,0:len(list2)] = list2
+    c1+=1;
+temp6 = np.zeros([num_con_com_clean,max_subgroup_numofnodes])
+k1 = np.array([])
+
+temp9 = np.empty([num_con_com_clean,max_subgroup_numofnodes])
+for i5 in range(0,num_con_com_clean):
+    temp4 = temp3[i5]
+    temp7 = np.array([]);
+    temp10 =temp6[i5];
+    i6 = 0; count = 0  
+    while i6 < int(lenind[i5])-1:
+        i6 = i6 + 1
+        temp5 = temp4[0:int(lenind[i5])]  
+        temp7 = np.append(temp7, fs.checkanomaly(checkinglist,temp5[i6]))
+    temp10[0:int(lenind[i5])-1] = temp7;
+    temp9[i5] =  temp10
+    k1 = np.append(k1, sum(temp10))
+k2=sum(k1)
+newk = np.zeros([int(max(k1))])
+anomaly_list_concern = np.array([])
+all_nodes = np.array([])
+for i in range(0,num_con_com_clean):
+    temp = temp9[i]
+    tempp = temp3[i]
+    for j in range(0, int(lenind[i])): 
+        all_nodes = np.unique(np.append(all_nodes,tempp[j]))  
+        if temp[j] == 1 : 
+            anomaly_list_concern = np.append(anomaly_list_concern, tempp[j])
+pnodes = int(round(perc_rate*(len(all_nodes))))
+all_nodes_len = int(len(all_nodes))
+training_nodesind = np.random.randint(0,all_nodes_len,pnodes);
+nontrain_nodesind = np.array([])
+anom_train_list=nontrain_nodesind
+for i in range(0,all_nodes_len):
+    if i not in training_nodesind:
+        nontrain_nodesind = np.append(nontrain_nodesind,i)
+training_set = np.array([]);nontrain_set = np.array([])
+for i in training_nodesind:
+    training_set = (np.append(training_set,umatrix3[i]))
+for i in nontrain_nodesind:
+    nontrain_set = (np.append(nontrain_set,umatrix3[i]))
+for i in training_set:
+    anom_val = fs.checkanomaly(anomaly_list_concern,i)
+    if anom_val == 1 :
+        anom_train_list = np.append(anom_train_list, i)
+nonsamp_anom = (np.array([]))
+for i in nontrain_set:
+    anom_val = fs.checkanomaly(anomaly_list_concern,i)
+    if anom_val == 1 :
+        nonsamp_anom = (np.append(nonsamp_anom, i))
+randomtrainingsetratio = len(training_set)/len(anom_train_list)
+
+            
+known_anomaly = nonsamp_anom;
+training_set   # will be used
+new_data1 = np.transpose(new_data);
+
+#g1 = len(nonsamp_anom); 
+#g2 = len(anom_train_list); 
+matrix_gen = np.zeros([len(training_set),3]);
+active_node_seq = np.array([]); 
+c1 = 0 ;act_seq = np.array([])
+check_anomaly_class = nonsamp_anom # select which anomaly class you choose for the estimation
+new_data1 = np.transpose(new_data)
+act_seq = np.array([])
+for i in range(0,len(training_set)):
+    act_node = training_set[i];
+    if fs.checkanomaly(check_anomaly_class,act_node):
+        matrix_gen[i,2]=1
+    att = 0 
+    if (np.remainder(i, 1000)==1):
+       print i
+    while att < attempt_limit:
+        step_count = 0 ;
+        while len(act_seq) < step_limit: 
+            act_seq = np.append(act_seq,act_node)
+            if act_node in new_data1[0] or act_node in new_data1[1]: 
+                a0 = np.where(act_node == new_data1[0])
+                np0 = np.array([]);
+                for i in a0:
+                    np0 = np.append(np0, i)
+                a1 = np.where(act_node == new_data1[1])
+                np1 = np.array([]);
+                for i in a1:
+                    np1 = np.append(np1, i)
+                g1 = len(np0)
+                g2 = len(np1)
+                npx = np.array([])
+                npx = np.append(npx,np0);
+                npx = np.append(npx,np1); 
+                rv = np.random.randint(len(npx)) 
+                if rv>g1:
+                    dif1 = rv-g1
+                    val1 = np1-dif1
+                    flag = 1 
+                elif rv == g1: 
+                    val1 = np1[-1]; 
+                    flag = 0 
+                elif rv < g1: 
+                    val1 = np0[rv];
+                    flag = 0 
+            act_node = new_data1[flag][val1]; 
+            anomaly_res_indicator = fs.oneise(act_node,check_anomaly_class)
+            matrix_gen[i,1] = matrix_gen[i,1] + anomaly_res_indicator    
+            if anomaly_res_indicator == 1:   
+                break        
+            act_seq = np.append(act_seq,act_node)
+        att+=1
+        matrix_gen[i,0] = matrix_gen[i,0] + 1
+        matrix_gen[i,1] = matrix_gen[i,1] + anomaly_res_indicator 
+toc = time.clock();comp_time=toc - tic ; print comp_time   ## evaluate the computation time
+
+mk = transpose(matrix_gen)
+sum(mk[1])
+sum(mk[2])
+c = 0 
+for i in range(0,len(matrix_gen)):
+    x = matrix_gen[i][2]
+    c = c+x
+
+#%%%%
+
